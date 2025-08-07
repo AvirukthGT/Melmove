@@ -68,12 +68,23 @@ async function fetchFromCloudDB() {
 
 
 // Provide a unified interface function for index.js to call
-async function getParkingData(source = 'local') {
+async function getParkingData(source = 'local', keyword = '') {
+  let data;
   if (source === 'cloud') {
-    return await fetchFromCloudDB();
+    data = await fetchFromCloudDB();
   } else {
-    return fetchFromLocalFile();
+    data = fetchFromLocalFile();
   }
+  return filterByKeyword(data, keyword);
+}
+
+// Filter function to apply keyword search
+function filterByKeyword(data, keyword) {
+  if (!keyword) return data;
+  const lower = keyword.toLowerCase();
+  return data.filter(d =>
+    d.name?.toLowerCase().includes(lower)
+  );
 }
 
 // export the getParkingData function for use in index.js
