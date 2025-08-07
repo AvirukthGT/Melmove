@@ -12,7 +12,7 @@ const { getParkingData } = require('./services/parkingService');
 app.get('/api/merged-parking', async (req, res) => {
   try {
     // Read the data source settings in .env
-    const keyword = req.query.q || '';
+    const keyword = req.query.keyword || '';
     const data = await getParkingData(process.env.DATA_SOURCE, keyword);
     res.json(data);
   } catch (e) {
