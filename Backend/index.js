@@ -12,7 +12,8 @@ const { getParkingData } = require('./services/parkingService');
 app.get('/api/merged-parking', async (req, res) => {
   try {
     // Read the data source settings in .env
-    const data = await getParkingData(process.env.DATA_SOURCE);
+    const keyword = req.query.keyword || '';
+    const data = await getParkingData(process.env.DATA_SOURCE, keyword);
     res.json(data);
   } catch (e) {
     console.error('Failed to load data:', e.message);
