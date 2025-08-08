@@ -1,17 +1,62 @@
- <!-- <script scoped></script> -->
-
 <template>
-  <nav class="navbar">
-    <div class="logo">MelMove</div>
-    <ul class="nav-links">
-      <li><router-link to="/urban-trends">Urban Trends</router-link></li>
-      <li><router-link to="/live">Live</router-link></li>
-      <li><router-link to="/forecast">Forecast</router-link></li>
-      <li><router-link to="/history">History</router-link></li>
-    </ul>
-  </nav>
+  <div id="app">
+    <Navbar />
+    <main class="main-content">
+      <router-view />
+    </main>
+  </div>
 </template>
 
+<script>
+import Navbar from './components/Navbar.vue'
 
+export default {
+  name: 'App',
+  components: {
+    Navbar
+  }
+}
+</script>
 
-<!-- <style scoped></style> -->
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: #ffffff;
+  color: #2c3e50;
+  margin: 0;
+  padding: 0;
+}
+
+#app {
+  font-family: 'Outfit', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #2c3e50;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+.main-content {
+  min-height: calc(100vh - 80px);
+  padding: 120px 20px 40px; /* 增加顶部间距，避免被navbar遮挡 */
+  background-color: #ffffff; /* app background to white */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #ffffff; /* ensure page background is white */
+}
+</style>
