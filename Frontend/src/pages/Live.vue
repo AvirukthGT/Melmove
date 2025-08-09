@@ -79,8 +79,14 @@
         
         <div class="info-content">
           <div class="info-item">
-            <span class="label">LOCATION:</span>
-            <span class="value">{{ selectedParking.location.street }}, {{ selectedParking.location.city }}, {{ selectedParking.location.state }} {{ selectedParking.location.postcode }}</span>
+            <span class="label">NAME:</span>
+            <span class="value">{{ selectedParking.name || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">COORDINATES:</span>
+            <span class="value">
+              {{ (selectedParking.lat != null && selectedParking.lng != null) ? `${selectedParking.lat.toFixed(5)}, ${selectedParking.lng.toFixed(5)}` : 'N/A' }}
+            </span>
           </div>
           
           <div class="info-item">
@@ -145,10 +151,6 @@
                 <span class="legend-marker available"></span>
                 <span>Present</span>
               </div>
-              <div class="legend-item">
-                <span class="legend-marker occupied"></span>
-                <span>Occupied</span>
-              </div>
             </div>
           </div>
         </div>
@@ -163,7 +165,9 @@
 </template>
 
 <script>
-import { GOOGLE_MAPS_API_KEY } from '../config/maps.js'
+//const API_BASE = 'https://melmove.onrender.com'
+// Use Vite dev proxy: keep empty so requests go to '/api' and are proxied to 3000
+const API_BASE = ''
 
 export default {
   name: 'Live',
@@ -184,25 +188,7 @@ export default {
       showUserLocation: false, // Track if user location should be shown
       
       // Mock data for development - individual parking bays
-      mockParkingData: [
-        {
-          id: 1,
-          name: 'Bay A1 - Wilson Parking',
-          location: {
-            street: '300 LA TROBE STREET',
-            city: 'MELBOURNE',
-            state: 'VIC',
-            postcode: '3000'
-          },
-          rates: {
-            hourly: 8,
-            daily: 35
-          },
-          available: true,
-          last_updated: '2024-01-15T10:30:00Z',
-          lat: -37.8136,
-          lng: 144.9631
-        },
+      mockParkingData: [    
         {
           id: 2,
           name: 'Bay B2 - Wilson Parking',
@@ -219,25 +205,7 @@ export default {
           available: false,
           last_updated: '2024-01-15T10:25:00Z',
           lat: -37.8140,
-          lng: 144.9640
-        },
-        {
-          id: 3,
-          name: 'Bay C1 - CBDpark',
-          location: {
-            street: '123 QUEEN STREET',
-            city: 'MELBOURNE',
-            state: 'VIC',
-            postcode: '3000'
-          },
-          rates: {
-            hourly: 6,
-            daily: 28
-          },
-          available: true,
-          last_updated: '2024-01-15T10:28:00Z',
-          lat: -37.8120,
-          lng: 144.9620
+          lng: 144.9640,
         },
         {
           id: 4,
@@ -255,79 +223,7 @@ export default {
           available: true,
           last_updated: '2024-01-15T10:32:00Z',
           lat: -37.8150,
-          lng: 144.9650
-        },
-        {
-          id: 5,
-          name: 'Bay E1 - Greenco Parking',
-          location: {
-            street: '150 RUSSELL STREET',
-            city: 'MELBOURNE',
-            state: 'VIC',
-            postcode: '3000'
-          },
-          rates: {
-            hourly: 9,
-            daily: 40
-          },
-          available: false,
-          last_updated: '2024-01-15T10:20:00Z',
-          lat: -37.8160,
-          lng: 144.9660
-        },
-        {
-          id: 6,
-          name: 'Bay F1 - Adina Hotel',
-          location: {
-            street: '189 QUEEN STREET',
-            city: 'MELBOURNE',
-            state: 'VIC',
-            postcode: '3000'
-          },
-          rates: {
-            hourly: 10,
-            daily: 45
-          },
-          available: true,
-          last_updated: '2024-01-15T10:35:00Z',
-          lat: -37.8115,
-          lng: 144.9615
-        },
-        {
-          id: 7,
-          name: 'Bay G1 - Secure Parking',
-          location: {
-            street: '456 COLLINS STREET',
-            city: 'MELBOURNE',
-            state: 'VIC',
-            postcode: '3000'
-          },
-          rates: {
-            hourly: 12,
-            daily: 50
-          },
-          available: false,
-          last_updated: '2024-01-15T10:15:00Z',
-          lat: -37.8170,
-          lng: 144.9670
-        },
-        {
-          id: 8,
-          name: 'Bay H1 - DIVVY Parking',
-          location: {
-            street: '789 FLINDERS STREET',
-            city: 'MELBOURNE',
-            state: 'VIC',
-            postcode: '3000'
-          },
-          rates: {
-            hourly: 4.5,
-            daily: 20
-          },
-          available: true,
-          last_updated: '2024-01-15T10:40:00Z',
-          lat: -37.8180,
-          lng: 144.9680
+          lng: 144.9650,
         }
       ]
     }
@@ -335,8 +231,12 @@ export default {
   
   computed: {
     filteredParkingData() {
+      // 1) 默认显示非占用的车位（包含 true 或未知 null/undefined）
+      let result = this.parkingData.filter(parking => parking.available !== false)
+
+      // 2) 若开启 2km 过滤，则按距离筛选
       if (this.isFilterActive && this.userLocation) {
-        return this.parkingData.filter(parking => {
+        result = result.filter(parking => {
           const distance = this.calculateDistance(
             this.userLocation.lat,
             this.userLocation.lng,
@@ -347,7 +247,18 @@ export default {
           return distance <= 2
         })
       }
-      return this.parkingData
+
+      // 3) 去重（优先使用后端提供的 id，否则降级到坐标+名称）
+      const seen = new Set()
+      const deduped = []
+      for (const p of result) {
+        const key = p.id ?? `${Number(p.lat).toFixed(5)},${Number(p.lng).toFixed(5)},${p.name}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          deduped.push(p)
+        }
+      }
+      return deduped
     }
   },
   
@@ -375,11 +286,8 @@ export default {
           zoom: 14, // Slightly zoomed out to show more area
           mapTypeId: google.maps.MapTypeId.ROADMAP,
           styles: [
-            {
-              featureType: 'poi',
-              elementType: 'labels',
-              stylers: [{ visibility: 'off' }]
-            }
+            { featureType: 'poi', elementType: 'labels.text', stylers: [{ visibility: 'off' }] }, // CHANGED
+            { featureType: 'poi', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] }  // CHANGED
           ]
         })
         
@@ -387,8 +295,7 @@ export default {
         console.log('Google Maps loaded successfully')
       } catch (error) {
         console.error('Error loading Google Maps:', error)
-        console.log('Falling back to custom map implementation')
-        this.initFallbackMap()
+        this.mapLoaded = false 
       }
     },
     
@@ -403,7 +310,7 @@ export default {
         
         // Create script element
         const script = document.createElement('script')
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBE47HieWMQx4-EaEKaA5O89TP6Z-GhUsk&libraries=places`
         script.async = true
         script.defer = true
         
@@ -426,191 +333,6 @@ export default {
         
         document.head.appendChild(script)
       })
-    },
-    
-    // Fallback map using CSS
-    initFallbackMap() {
-      const mapContainer = this.$refs.mapContainer
-      mapContainer.innerHTML = `
-        <div style="
-          width: 100%; 
-          height: 100%; 
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          position: relative;
-          border-radius: 8px;
-          overflow: hidden;
-        ">
-          <div style="
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-image: 
-              linear-gradient(90deg, #e9ecef 1px, transparent 1px),
-              linear-gradient(0deg, #e9ecef 1px, transparent 1px),
-              linear-gradient(90deg, transparent 0%, #d1d5db 2%, #d1d5db 8%, transparent 10%),
-              linear-gradient(0deg, transparent 0%, #d1d5db 2%, #d1d5db 8%, transparent 10%);
-            background-size: 50px 50px, 50px 50px, 200px 200px, 200px 200px;
-            opacity: 0.7;
-          "></div>
-          
-          <!-- Street names -->
-          <div style="position: absolute; top: 15%; left: 10%; font-size: 11px; color: #374151; font-weight: 600; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px;">Victoria St</div>
-          <div style="position: absolute; top: 25%; left: 15%; font-size: 11px; color: #374151; font-weight: 600; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px;">Capel St</div>
-          <div style="position: absolute; top: 35%; left: 20%; font-size: 11px; color: #374151; font-weight: 600; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px;">Franklin St</div>
-          <div style="position: absolute; top: 45%; left: 25%; font-size: 11px; color: #374151; font-weight: 600; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px;">La Trobe St</div>
-          <div style="position: absolute; top: 55%; left: 30%; font-size: 11px; color: #374151; font-weight: 600; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px;">Russell Str</div>
-          <div style="position: absolute; top: 65%; left: 35%; font-size: 11px; color: #374151; font-weight: 600; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px;">Queen Street</div>
-          <div style="position: absolute; top: 75%; left: 40%; font-size: 11px; color: #374151; font-weight: 600; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px;">Flinders C</div>
-          
-          <!-- Map notice -->
-          <div style="
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background: rgba(255,255,255,0.9);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            color: #666;
-            border: 1px solid #ddd;
-          ">
-            <strong>Demo Mode:</strong> Using fallback map. Add Google Maps API key for full functionality.
-          </div>
-        </div>
-      `
-      
-      this.$nextTick(() => {
-        this.addFallbackMarkers()
-      })
-      
-      this.mapLoaded = true
-    },
-    
-    // Add markers to fallback map
-    addFallbackMarkers() {
-      const mapContainer = this.$refs.mapContainer
-      
-      // Clear existing markers
-      const existingMarkers = mapContainer.querySelectorAll('[data-marker]')
-      existingMarkers.forEach(marker => marker.remove())
-      
-      // Calculate bounds for all markers (parking + user location)
-      let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity
-      
-      // Add parking data to bounds
-      this.filteredParkingData.forEach(parking => {
-        minLat = Math.min(minLat, parking.lat)
-        maxLat = Math.max(maxLat, parking.lat)
-        minLng = Math.min(minLng, parking.lng)
-        maxLng = Math.max(maxLng, parking.lng)
-      })
-      
-      // Add user location to bounds if available (only if not searching or if user clicked "My Location")
-      if (this.userLocation && (!this.searchQuery.trim() || this.showUserLocation)) {
-        minLat = Math.min(minLat, this.userLocation.lat)
-        maxLat = Math.max(maxLat, this.userLocation.lat)
-        minLng = Math.min(minLng, this.userLocation.lng)
-        maxLng = Math.max(maxLng, this.userLocation.lng)
-      }
-      
-      // Add some padding
-      const latPadding = (maxLat - minLat) * 0.1
-      const lngPadding = (maxLng - minLng) * 0.1
-      minLat -= latPadding
-      maxLat += latPadding
-      minLng -= lngPadding
-      maxLng += lngPadding
-      
-      this.filteredParkingData.forEach(parking => {
-        const marker = document.createElement('div')
-        marker.setAttribute('data-marker', 'parking')
-        marker.style.cssText = `
-          position: absolute;
-          width: 30px;
-          height: 30px;
-          border-radius: 50%;
-          background-color: ${this.getMarkerColor(parking)};
-          border: 2px solid white;
-          box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: bold;
-          font-size: 14px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          z-index: 10;
-        `
-        marker.textContent = 'P'
-        marker.title = parking.name
-        
-        // Position marker based on bounds
-        const latPercent = ((parking.lat - minLat) / (maxLat - minLat)) * 100
-        const lngPercent = ((parking.lng - minLng) / (maxLng - minLng)) * 100
-        marker.style.top = `${Math.max(5, Math.min(95, latPercent))}%`
-        marker.style.left = `${Math.max(5, Math.min(95, lngPercent))}%`
-        
-        // Add click event
-        marker.addEventListener('click', (event) => {
-          event.stopPropagation()
-          this.selectParking(parking)
-        })
-        
-        // Add hover effect
-        marker.addEventListener('mouseenter', () => {
-          marker.style.transform = 'scale(1.2)'
-          marker.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)'
-        })
-        
-        marker.addEventListener('mouseleave', () => {
-          marker.style.transform = 'scale(1)'
-          marker.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)'
-        })
-        
-        mapContainer.appendChild(marker)
-      })
-      
-      // Add user location marker if available (only if not searching or if user clicked "My Location")
-      if (this.userLocation && (!this.searchQuery.trim() || this.showUserLocation)) {
-        const userMarker = document.createElement('div')
-        userMarker.setAttribute('data-marker', 'user')
-        userMarker.style.cssText = `
-          position: absolute;
-          width: 35px;
-          height: 35px;
-          border-radius: 50%;
-          background-color: #007bff;
-          border: 2px solid white;
-          box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 18px;
-          cursor: pointer;
-          z-index: 15;
-        `
-        userMarker.textContent = '📍'
-        userMarker.title = 'Your Location'
-        
-        // Calculate position relative to all markers bounds
-        const latPercent = ((this.userLocation.lat - minLat) / (maxLat - minLat)) * 100
-        const lngPercent = ((this.userLocation.lng - minLng) / (maxLng - minLng)) * 100
-        
-        // Position the marker
-        userMarker.style.top = `${Math.max(5, Math.min(95, latPercent))}%`
-        userMarker.style.left = `${Math.max(5, Math.min(95, lngPercent))}%`
-        
-        mapContainer.appendChild(userMarker)
-      }
-    },
-    
-    // Get marker color for fallback map
-    getMarkerColor(parking) {
-      return parking.available ? '#28a745' : '#dc3545' // Green for available, red for occupied
     },
     
     // Get user location
@@ -726,23 +448,33 @@ export default {
     async loadParkingData() {
       this.isLoading = true
       try {
-        // In production, use real API
-        // const response = await fetch('https://melmove.onrender.com/api/merged-parking')
-        // this.parkingData = await response.json()
-        
-        // For now, use mock data
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API delay
-        this.parkingData = [...this.mockParkingData]
+        // In development or production
+        const res = await fetch(`${API_BASE}/api/merged-parking`, { cache: 'no-store' })
+        const json = await res.json()
+        const items = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : [])
+
+        console.table(items.slice(0, 5))
+
+        if (items.length) {
+          this.parkingData = items.map((item, idx) => ({
+            id: item.id ?? idx,
+            name: item.name,
+            lat: item.lat ?? item.location?.lat,
+            lng: item.lng ?? item.location?.lon,
+            rates: item.rates,
+            available: (item.status !== undefined) ? item.status : item.available,
+            last_updated: item.last_updated ?? item.status_timestamp ?? null
+          }))
+        } else {
+          console.error('API returned error:', json?.error)
+          this.parkingData = []
+        }
+
         this.lastUpdated = new Date().toLocaleTimeString()
-        
-        // Add markers to map
-        this.$nextTick(() => {
-          this.addParkingMarkers()
-        })
+        this.$nextTick(() => this.addParkingMarkers())
       } catch (error) {
         console.error('Error loading parking data:', error)
-        // Fallback to mock data
-        this.parkingData = [...this.mockParkingData]
+        // this.parkingData = [...this.mockParkingData]   // <<< mock
       } finally {
         this.isLoading = false
       }
@@ -760,40 +492,25 @@ export default {
       this.isLoading = true
       try {
         // In production, use real API
-        // const response = await fetch(`https://melmove.onrender.com/api/merged-parking?source=local&keyword=${encodeURIComponent(this.searchQuery)}`)
-        // this.parkingData = await response.json()
-        
-        // Mock search with improved logic
-        await new Promise(resolve => setTimeout(resolve, 500))
-        const query = this.searchQuery.toLowerCase()
-        
-        this.parkingData = this.mockParkingData.filter(parking => {
-          const nameMatch = parking.name.toLowerCase().includes(query)
-          
-          // Handle both old and new data structures
-          let addressMatch = false
-          let streetMatch = false
-          
-          if (parking.location) {
-            // New data structure
-            const fullAddress = `${parking.location.street} ${parking.location.city} ${parking.location.state} ${parking.location.postcode}`.toLowerCase()
-            addressMatch = fullAddress.includes(query)
-            streetMatch = parking.location.street.toLowerCase().includes(query.replace('street', 'st').replace('street', ''))
-          } else if (parking.address) {
-            // Old data structure
-            addressMatch = parking.address.toLowerCase().includes(query)
-            streetMatch = parking.address.toLowerCase().includes(query.replace('street', 'st').replace('street', ''))
-          }
-          
-          return nameMatch || addressMatch || streetMatch
-        })
-        
-        // If no results, show a message
-        if (this.parkingData.length === 0) {
-          console.log('No parking spots found for:', this.searchQuery)
+        const q = encodeURIComponent(this.searchQuery.trim())
+        const res = await fetch(`${API_BASE}/api/merged-parking?keyword=${q}`, { cache: 'no-store' })
+        const json = await res.json()
+        const items = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : [])
+
+        if (items.length) {
+          this.parkingData = items.map((item, idx) => ({
+            id: item.id ?? idx,
+            name: item.name,
+            lat: item.lat ?? item.location?.lat,
+            lng: item.lng ?? item.location?.lon,
+            rates: item.rates,
+            available: (item.status !== undefined) ? item.status : item.available,
+            last_updated: item.last_updated ?? item.status_timestamp ?? null
+          }))
+          this.addParkingMarkers()
+        } else {
+          console.error('API returned error:', json?.error)
         }
-        
-        this.addParkingMarkers()
       } catch (error) {
         console.error('Error searching:', error)
       } finally {
@@ -801,62 +518,41 @@ export default {
       }
     },
     
-    // Handle search input
-    handleSearch() {
-      if (this.searchQuery.trim() === '') {
-        this.showUserLocation = false
-        this.loadParkingData()
-      }
-    },
-    
     // Toggle 2km filter
     async toggleFilter() {
       this.isFilterActive = !this.isFilterActive
-      
+
       if (this.isFilterActive && this.userLocation) {
-        this.isLoading = true
-        try {
-          // In production, use real API
-          // const response = await fetch(`https://melmove.onrender.com/api/merged-parking?lat=${this.userLocation.lat}&lng=${this.userLocation.lng}&radius=2000`)
-          // this.parkingData = await response.json()
-          
-          // Mock filter with distance calculation
-          await new Promise(resolve => setTimeout(resolve, 500))
-          this.parkingData = this.mockParkingData.filter(parking => {
-            const distance = this.calculateDistance(
-              this.userLocation.lat,
-              this.userLocation.lng,
-              parking.lat,
-              parking.lng
-            )
-            parking.distance = distance.toFixed(1)
-            return distance <= 2
-          })
-          
-          // Sort by distance
-          this.parkingData.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
-          
+      this.isLoading = true
+      try {
+        const { lat, lng } = this.userLocation
+        // 后端半径单位是「公里」，UI 写 2km，就传 radiusKm=2
+        const res = await fetch(`${API_BASE}/api/merged-parking?lat=${lat}&lng=${lng}&radiusKm=2`, { cache: 'no-store' })
+        const json = await res.json()
+        const items = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : [])
+      
+        if (items.length) {
+          this.parkingData = items.map((item, idx) => ({
+            id: item.id ?? idx,
+            name: item.name,
+            lat: item.lat ?? item.location?.lat,
+            lng: item.lng ?? item.location?.lon,
+            rates: item.rates,
+            available: (item.status !== undefined) ? item.status : item.available,
+            last_updated: item.last_updated ?? item.status_timestamp ?? null
+          }))
           this.addParkingMarkers()
-        } catch (error) {
-          console.error('Error filtering:', error)
-        } finally {
-          this.isLoading = false
+        } else {
+          console.error('API returned error:', json?.error)
         }
-      } else {
-        this.loadParkingData()
+      } catch (error) {
+        console.error('Error filtering:', error)
+      } finally {
+        this.isLoading = false
       }
-    },
-    
-    // Calculate distance between two points
-    calculateDistance(lat1, lng1, lat2, lng2) {
-      const R = 6371 // Earth's radius in km
-      const dLat = (lat2 - lat1) * Math.PI / 180
-      const dLng = (lng2 - lng1) * Math.PI / 180
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLng/2) * Math.sin(dLng/2)
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
-      return R * c
+      } else {
+        this.loadParkingData() // 取消过滤时回到全量
+      }
     },
     
     // Select parking
@@ -976,8 +672,6 @@ export default {
         this.autoRefreshInterval = null
       }
     },
-
-
   }
 }
 </script>
