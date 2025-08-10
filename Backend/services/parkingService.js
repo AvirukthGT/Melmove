@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const mysql = require('mysql2/promise');
+const sql = require('mssql');
+const fetchFn = globalThis.fetch;
 
 // Mock local file reading
 function fetchFromLocalFile() {
@@ -45,50 +46,60 @@ function fetchFromLocalFile() {
 
 // Read from cloud database
 async function fetchFromCloudDB() {
-  // Ensure the mysql2/promise package is installed
-  const mysql = require('mysql2/promise');
-
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
+  const pool = await sql.connect({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+    server: process.env.DB_HOST,            // melmovesqlserver.database.windows.net
+    database: process.env.DB_NAME,          // melmove_sql
+    port: Number(process.env.DB_PORT) || 1433,
+    options: { encrypt: true, trustServerCertificate: false }
   });
 
   try {
-    const [bays] = await connection.execute('SELECT * FROM parking_bays');
-    const [sensors] = await connection.execute('SELECT * FROM parking_sensors');
+    // 1) 读 gold_parking_latest_status（已含 lat/lon/status/...）
+    const result = await pool.request().query(`
+      SELECT kerbsideid, status_description, status_timestamp, lastupdated, lat, lon
+      FROM gold_parking_latest_status
+    `);
+    const rows = result.recordset || [];
 
-    // Normalize IDs to string before matching to prevent type mismatches
-    const sensorsByKerbsideId = new Map();
-    for (const s of sensors) {
-      if (s?.kerbsideid != null) sensorsByKerbsideId.set(String(s.kerbsideid), s);
+    // 2) 用本地 bays.json 补充搜索需要的 roadsegmentdescription（name）
+    const bays = JSON.parse(
+      fs.readFileSync(path.join(__dirname, '../data/on-street-parking-bays.json'), 'utf8')
+    );
+    const bayById = new Map();
+    for (const b of bays) {
+      if (b?.kerbsideid != null) {
+        bayById.set(String(b.kerbsideid), {
+          roadsegmentdescription: b.roadsegmentdescription || 'Unknown Street',
+          lat: b.latitude,
+          lng: b.longitude
+        });
+      }
     }
 
-    const merged = bays.map(bay => {
-      const key = bay?.kerbsideid != null ? String(bay.kerbsideid) : null;
-      const sensor = key ? sensorsByKerbsideId.get(key) : undefined;
+    // 3) 映射为前端需要的结构（注意 lon -> lng）
+    const merged = rows.map(r => {
+      const key = r?.kerbsideid != null ? String(r.kerbsideid) : null;
+      const bay = key ? bayById.get(key) : undefined;
+
+      const lat = r.lat ?? bay?.lat ?? -37.8136;
+      const lng = (r.lon ?? bay?.lng ?? 144.9631);
+
       return {
-        id: bay.kerbsideid,
-        name: bay.roadsegmentdescription || 'Unknown Street',
-        lat: bay.latitude || -37.8136,
-        lng: bay.longitude || 144.9631,
-        rates: {
-          hourly: 8,
-          daily: 35
-        },
-        status: sensor == null ? null : sensor.status_description === 'Unoccupied',
-        last_updated: sensor?.status_timestamp || null
+        id: r.kerbsideid,
+        name: bay?.roadsegmentdescription || 'Unknown Street',
+        lat,
+        lng,
+        rates: { hourly: 8, daily: 35 },
+        status: r.status_description == null ? null : r.status_description === 'Unoccupied',
+        last_updated: r.status_timestamp || r.lastupdated || null
       };
     });
 
-    await connection.end();
     return merged;
-  } catch (err) {
-    console.error('Error querying database:', err.message);
-    await connection.end();
-    throw err;
+  } finally {
+    await pool.close();
   }
 }
 
@@ -120,6 +131,67 @@ function getMockData(){
   ];
 }
 
+// ---------- 3)Use JSON API----------
+async function fetchFromJsonApi(url = process.env.JSON_API_URL) {
+  if (!url) {
+    url = 'https://melmoveinsight.z8.web.core.windows.net/data/part-merged.json';
+  }
+
+  const res = await fetchFn(url, {
+    // Caching can be disabled on demand. - 304 problem
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    }
+  });
+
+  if (!res.ok) {
+    throw new Error(`JSON API HTTP ${res.status}`);
+  }
+
+  const text = await res.text();
+
+  let records;
+  // Supports both pure arrays and NDJSON (one JSON per line)
+  const trimmed = text.trim();
+  if (trimmed.startsWith('[')) {
+    records = JSON.parse(trimmed);
+  } else {
+    records = trimmed
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean)
+      .map(l => JSON.parse(l));
+  }
+
+  // Use local bays json add roadsegmentdescription
+  let bayById = null;
+  try {
+    const bays = JSON.parse(
+      fs.readFileSync(path.join(__dirname, '../data/on-street-parking-bays.json'), 'utf8')
+    );
+    bayById = new Map();
+    for (const b of bays) {
+      if (b?.kerbsideid != null) {
+        bayById.set(String(b.kerbsideid), b.roadsegmentdescription || 'Unknown Street');
+      }
+    }
+  } catch (e) {
+    console.warn('Read local bays.json failed, names may fallback to Unknown Street:', e.message);
+  }
+
+  return records.map(r => ({
+    id: r.kerbsideid,
+    name: bayById?.get(String(r.kerbsideid)) || 'Unknown Street',
+    lat: r.lat ?? -37.8136,
+    lng: r.lon ?? 144.9631,       // API uses lon, which is mapped to lng here
+    rates: { hourly: 8, daily: 35 },
+    status: r.status_description == null ? null : r.status_description === 'Unoccupied',
+    last_updated: r.status_timestamp || r.lastupdated || null
+  }));
+}
+
+
 // Filter function to apply keyword search
 function filterByKeyword(data, keyword) {
   if (!keyword) return data;
@@ -144,7 +216,13 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
 async function getParkingData(source = 'local', keyword = '', lat = null, lng = null, radiusKm = null) {
   let data;
   try {
-    data = (source === 'cloud') ? await fetchFromCloudDB() : fetchFromLocalFile();
+    if (source === 'cloud') {
+      data = await fetchFromCloudDB();
+    } else if (source === 'json') {
+      data = await fetchFromJsonApi();
+    } else {
+      data = fetchFromLocalFile();
+    }
   } catch (error) {
     console.error('Error fetching data:', error);
     data = getMockData(); // Backup plan using mock Data
