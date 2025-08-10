@@ -377,7 +377,6 @@ export default {
     display: none;
   }
   
-  /* 移动端隐藏下划线 */
   .navbar::after {
     display: none;
   }

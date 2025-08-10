@@ -241,14 +241,6 @@ async function getParkingData(source = 'local', keyword = '', lat = null, lng = 
     });
   }
 
-  // Filter function to apply keyword search
-  function filterByKeyword(data, keyword) {
-    if (!keyword) return data;
-    const lower = keyword.toLowerCase();
-    return data.filter(d => d.name?.toLowerCase().includes(lower)
-    );
-  }
-
   return data;
 }
 
