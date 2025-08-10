@@ -228,15 +228,15 @@ export default {
     gap: 40px;
     padding: 0 20px;
   }
-  
+
   .hero-title {
     font-size: 2.5rem;
   }
-  
+
   .hero-description {
     font-size: 1.1rem;
   }
-  
+
   .car-container {
     width: 100%;
     max-width: 300px;

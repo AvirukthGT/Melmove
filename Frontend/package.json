@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.10",
+    "d3": "^7.9.0",
+    "leaflet": "^1.9.4",
     "vue": "^3.4.0",
     "vue-router": "^4.5.1"
   },
