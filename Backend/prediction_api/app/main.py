@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from .forecast_core import predict_parking, load_and_clean_data, forecast_with_ml
 import io
 import numpy as np
@@ -9,6 +10,19 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 app = FastAPI()
+
+# 允许前端域名访问（本地开发端口写全；以后上线把域名加进来）
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173", "http://127.0.0.1:5173",
+        "http://localhost:5174", "http://127.0.0.1:5174",
+        "http://localhost:8080", "http://127.0.0.1:8080",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def root():

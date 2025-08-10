@@ -4,6 +4,7 @@
       <h1>FORECAST</h1>
     </div>
 
+    <!-- 搜索区域 -->
     <div class="search-section">
       <div class="search-inputs">
         <div class="input-group">
@@ -24,167 +25,78 @@
             v-model="selectedDateTime"
           />
         </div>
-        <button class="continue-btn">CONTINUE</button>
+        <button class="continue-btn" @click="onContinue" :disabled="loading">
+          {{ loading ? 'Loading...' : 'CONTINUE' }}
+        </button>
       </div>
     </div>
 
-    <div class="forecast-visualizations">
+    <!-- 错误提示 -->
+    <div v-if="error" style="color:red; margin-bottom:20px;">
+      {{ error }}
+    </div>
+
+    <!-- 预测结果 -->
+    <div class="forecast-visualizations" v-if="result">
       <div class="chart-grid">
-        <!-- Line Chart -->
+
+        <!-- Line Chart (来自 predict_plot) -->
         <div class="chart-card">
           <div class="chart-header">
-            <div class="chart-title">Lonsdale St</div>
-            <div class="chart-meta">
-              <span class="time">8:30 AM</span>
-              <span class="prediction">Predicted: 2 spots</span>
-              <span class="confidence">Confidence: 87%</span>
+            <div class="chart-title">{{ chartTitle }}</div>
+            <div class="chart-meta" v-if="predictedNow">
+              <span class="time">{{ formatTime(predictedNow.time) }}</span>
+              <span class="prediction">Predicted: {{ predictedNow.y.toFixed(0) }} spots</span>
+              <span class="confidence">
+                Confidence: {{ calcConfidence(predictedNow).toFixed(0) }}%
+              </span>
             </div>
           </div>
-          <div class="chart-container">
-            <div class="line-chart">
-              <div class="chart-y-axis">
-                <span>20</span>
-                <span>15</span>
-                <span>10</span>
-                <span>5</span>
-                <span>0</span>
-              </div>
-              <div class="chart-content">
-                <div class="line-path"></div>
-                <div class="data-points">
-                  <div class="point" style="left: 10%; top: 60%"></div>
-                  <div class="point" style="left: 30%; top: 40%"></div>
-                  <div class="point" style="left: 50%; top: 80%"></div>
-                  <div class="point" style="left: 70%; top: 20%"></div>
-                  <div class="point" style="left: 90%; top: 70%"></div>
-                </div>
-              </div>
-              <div class="chart-x-axis">
-                <span>8 AM</span>
-                <span>9 AM</span>
-                <span>12 PM</span>
-                <span>12 PM</span>
-              </div>
-            </div>
+          <div class="chart-container" style="text-align:center;">
+            <img v-if="plotSrc" :src="plotSrc" alt="Prediction Plot" style="max-width:100%; max-height:200px;">
           </div>
           <div class="chart-description">
-            line chart - showing hourly parking trends throughout the day (e.g., 7 am to 7 pm)
+            line chart - from API /predict_plot
           </div>
         </div>
 
         <!-- Bar Chart -->
         <div class="chart-card">
           <div class="chart-header">
-            <div class="chart-title">Lonsdale St</div>
-            <div class="chart-meta">
-              <span class="time">8:30 AM</span>
-              <span class="prediction">Predicted: 2 spots</span>
-              <span class="confidence">Confidence: 87%</span>
+            <div class="chart-title">{{ chartTitle }}</div>
+            <div class="chart-meta" v-if="predictedNow">
+              <span class="time">{{ formatTime(predictedNow.time) }}</span>
+              <span class="prediction">Predicted: {{ predictedNow.y.toFixed(0) }} spots</span>
+              <span class="confidence">
+                Confidence: {{ calcConfidence(predictedNow).toFixed(0) }}%
+              </span>
             </div>
           </div>
           <div class="chart-container">
             <div class="bar-chart">
               <div class="chart-y-axis">
-                <span>30</span>
-                <span>20</span>
-                <span>10</span>
+                <span>{{ result.history.max }}</span>
+                <span>{{ (result.history.max/1.5).toFixed(0) }}</span>
+                <span>{{ (result.history.max/3).toFixed(0) }}</span>
                 <span>0</span>
               </div>
               <div class="chart-content">
                 <div class="bars">
-                  <div class="bar" style="height: 60%"></div>
-                  <div class="bar" style="height: 80%"></div>
-                  <div class="bar" style="height: 40%"></div>
-                  <div class="bar" style="height: 90%"></div>
-                </div>
-              </div>
-              <div class="chart-x-axis">
-                <span>8 AM</span>
-                <span>9 AM</span>
-                <span>12 PM</span>
-                <span>12 PM</span>
-              </div>
-            </div>
-          </div>
-          <div class="chart-description">
-            bar chart - displaying total available spots by time blocks
-          </div>
-        </div>
-
-        <!-- Heatmap -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Lonsdale St</div>
-            <div class="chart-meta">
-              <span class="time">8:30 AM</span>
-              <span class="prediction">Predicted: 12 spots</span>
-              <span class="confidence">Confidence: 87%</span>
-            </div>
-          </div>
-          <div class="chart-container">
-            <div class="heatmap">
-              <div class="heatmap-grid">
-                <div class="heatmap-cell" style="background-color: #ffeb3b"></div>
-                <div class="heatmap-cell" style="background-color: #ffc107"></div>
-                <div class="heatmap-cell" style="background-color: #ff9800"></div>
-                <div class="heatmap-cell" style="background-color: #f57c00"></div>
-                <div class="heatmap-cell" style="background-color: #ffeb3b"></div>
-                <div class="heatmap-cell" style="background-color: #ffc107"></div>
-                <div class="heatmap-cell" style="background-color: #ff9800"></div>
-                <div class="heatmap-cell" style="background-color: #f57c00"></div>
-                <div class="heatmap-cell" style="background-color: #ffc107"></div>
-                <div class="heatmap-cell" style="background-color: #ff9800"></div>
-                <div class="heatmap-cell" style="background-color: #f57c00"></div>
-                <div class="heatmap-cell" style="background-color: #e65100"></div>
-                <div class="heatmap-cell" style="background-color: #ff9800"></div>
-                <div class="heatmap-cell" style="background-color: #f57c00"></div>
-                <div class="heatmap-cell" style="background-color: #e65100"></div>
-                <div class="heatmap-cell" style="background-color: #bf360c"></div>
-              </div>
-            </div>
-          </div>
-          <div class="chart-description">
-            heatmap - visualizing density of predicted availability on a map
-          </div>
-        </div>
-
-        <!-- Map Visualization -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Lonsdale St</div>
-            <div class="chart-meta">
-              <span class="time">8:30 AM</span>
-              <span class="prediction">Predicted: 12 spots</span>
-              <span class="confidence">Confidence: 87%</span>
-            </div>
-          </div>
-          <div class="chart-container">
-            <div class="map-visualization">
-              <div class="map-grid">
-                <div class="target-marker">
-                  <div class="target-circle"></div>
-                  <div class="target-rings">
-                    <div class="ring ring-1"></div>
-                    <div class="ring ring-2"></div>
-                    <div class="ring ring-3"></div>
-                  </div>
+                  <div 
+                    v-for="(p, idx) in result.predictions" 
+                    :key="idx" 
+                    class="bar" 
+                    :style="{ height: `${(p.y/result.history.max)*100}%` }"
+                  ></div>
                 </div>
               </div>
             </div>
           </div>
           <div class="chart-description">
-            Predictions are based on historical trends and realtime data.
+            bar chart - based on predicted values
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="footer-info">
-      <div class="quote">
-        "Predictions are based on historical trends and real-time data."
-      </div>
-      <div class="data-source">
-        Data Source: City Of Melbourne Open Parking API
       </div>
     </div>
   </div>
@@ -196,11 +108,84 @@ export default {
   data() {
     return {
       searchArea: 'Lonsdale St',
-      selectedDateTime: '8:30 AM'
+      selectedDateTime: '',
+      loading: false,
+      error: '',
+      result: null,
+      plotSrc: ''
+    }
+  },
+  computed: {
+    apiBase() {
+      return import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+    },
+    chartTitle() {
+      return this.searchArea || 'All Zones';
+    },
+    predictedNow() {
+      if (!this.result?.predictions?.length) return null;
+      return this.result.predictions[0];
+    },
+    yMax() {
+      const histMax = Number(this.result?.history?.max ?? 0);
+      const predMax = Math.max(
+        0,
+        ...(this.result?.predictions?.map(p => Number(p.hi ?? p.y ?? 0)) || [0])
+      );
+    const max = Math.max(histMax, predMax);
+    return max > 0 ? max : 1; // 防止除 0
+  },
+
+  },
+  methods: {
+    formatTime(t) {
+      return new Date(t).toLocaleString();
+    },
+    calcConfidence(p) {
+      if (!p?.y || !p?.lo || !p?.hi) return 0;
+      const range = p.hi - p.lo;
+      return (1 - range / p.y) * 100;
+    },
+    buildQuery(params) {
+      const q = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => {
+        if (v) q.append(k, v);
+      });
+      return q.toString();
+    },
+    async onContinue() {
+      this.error = '';
+      this.loading = true;
+      try {
+        await Promise.all([this.fetchPredict(), this.fetchPlot()]);
+      } catch (e) {
+        this.error = e?.message || 'Request failed';
+      } finally {
+        this.loading = false;
+      }
+    },
+    async fetchPredict() {
+      const qs = this.buildQuery({ zone: this.searchArea, hours: 24 });
+      const url = `${this.apiBase}/predict${qs ? `?${qs}` : ''}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data?.error?.message || 'API returned error');
+      this.result = data;
+    },
+    async fetchPlot() {
+      const qs = this.buildQuery({ zone: this.searchArea, hours: 24 });
+      const url = `${this.apiBase}/predict_plot${qs ? `?${qs}` : ''}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Plot HTTP ${res.status}`);
+      const blob = await res.blob();
+      this.plotSrc = URL.createObjectURL(blob);
     }
   }
 }
 </script>
+
+
 
 <style scoped>
 .forecast-page {
