@@ -8,11 +8,11 @@
       <div class="hero-text">
         <h1>Data Insights</h1>
         <p class="subtitle">
-          Accessible, beautiful insights for Melbourne commuters—how car ownership and CBD population shape congestion and kerbside pressure.
+          Accessible, beautiful insights for Melbourne commuters,how car ownership and CBD population shape congestion and kerbside pressure.
         </p>
       </div>
       <div class="hero-badges">
-        <span class="badge">Must‑Have</span>
+        <span class="badge">Data Driven</span>
         <span class="badge alt">Community Impact</span>
       </div>
     </header>
