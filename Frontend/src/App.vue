@@ -4,6 +4,9 @@
     <main class="main-content">
       <router-view />
     </main>
+    <footer class="footer">
+      © 2025 MelMove. All rights reserved.
+    </footer>
   </div>
 </template>
 
@@ -58,5 +61,14 @@ body {
   margin: 0;
   padding: 0;
   background-color: #ffffff; /* ensure page background is white */
+}
+
+.footer {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #888;
+  padding: 15px 0;
+  border-top: 1px solid #eee;
+  background-color: #ffffff;
 }
 </style>
