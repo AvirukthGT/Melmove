@@ -4,32 +4,51 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-// Introduce the data processing function
-const { getParkingData } = require('./services/parkingService');
+// Debug: 找出带占位符的环境变量
+Object.entries(process.env)
+  .filter(([k, v]) => typeof v === 'string' && /\$\{.+\}/.test(v))
+  .forEach(([k, v]) => console.log('[ENV with ${..}]', k, '=', v));
 
+// Debug: 追踪谁在注册路由
 const app = express();
+const _use = app.use.bind(app);
+app.use = function (...args) {
+  if (typeof args[0] === 'string') {
+    console.log('[APP.USE]', args[0]);
+  }
+  return _use(...args);
+};
+const _get = app.get.bind(app);
+app.get = function (path, ...rest) {
+  console.log('[APP.GET]', path);
+  return _get(path, ...rest);
+};
+
+const { getParkingData } = require('./services/parkingService');
 const PORT = process.env.PORT || 3000;
 
-// Add CORS support
+// ===== Global CORS configuration =====
+const allowedOrigins = [
+  /^http:\/\/localhost:\d+$/,                
+  /^http:\/\/127\.0\.0\.1:\d+$/,              
+  /^https:\/\/melmove\.vercel\.app$/,         
+  /^https:\/\/melmove-git-.*\.vercel\.app$/   
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
-    'http://localhost:8080',
-    'http://localhost:3000',
-    'http://127.0.0.1:8080',
-    'https://melmove.vercel.app/'
-  ],
-  credentials: true
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    const ok = allowedOrigins.some(pattern => pattern.test(origin));
+    if (ok) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
 }));
 
-// JSON express
 app.use(express.json());
 
-// Define API routes
-// Get parking data (support keywords search & distance filter)
 app.get('/api/merged-parking', async (req, res) => {
   try {
     const { keyword, lat, lng, radiusKm } = req.query;
@@ -40,7 +59,6 @@ app.get('/api/merged-parking', async (req, res) => {
       lng ? parseFloat(lng) : null,
       radiusKm ? parseFloat(radiusKm) : null
     );
-
     res.json({
       success: true,
       data,
@@ -57,7 +75,6 @@ app.get('/api/merged-parking', async (req, res) => {
   }
 });
 
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -66,10 +83,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Start server listening
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-  console.log(`API endpoint: http://localhost:${PORT}/api/merged-parking`);
 });
-
