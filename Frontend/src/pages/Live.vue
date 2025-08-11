@@ -400,15 +400,23 @@ export default {
           bounds.extend({ lat: parking.lat, lng: parking.lng })
         })
 
-        // Add user location marker (only if not searching or if user clicked "My Location")
-        if (this.userLocation && (!this.searchQuery.trim() || this.showUserLocation)) {
+        // 总是显示用户位置 - 关键！
+        if (this.userLocation) {
           this.addUserMarker()
           bounds.extend(this.userLocation)
         }
-
-        // Let Google Maps automatically fit all markers
-        if (!bounds.isEmpty()) {
+        
+        // 如果有停车位数据，适配边界
+        if (this.filteredParkingData.length > 0) {
           this.map.fitBounds(bounds)
+        } else if (this.userLocation) {
+          // 如果没有停车位，就以用户位置为中心显示
+          this.map.setCenter(this.userLocation)
+          this.map.setZoom(15)
+        } else {
+          // 如果连用户位置都没有，显示墨尔本市中心
+          this.map.setCenter({ lat: -37.8136, lng: 144.9631 })
+          this.map.setZoom(13)
         }
       } else {
         // Fallback map implementation
@@ -495,12 +503,16 @@ export default {
             available: (item.status !== undefined) ? item.status : item.available,
             last_updated: item.last_updated ?? item.status_timestamp ?? null
           }))
-          this.addParkingMarkers()
+          // this.addParkingMarkers()
         } else {
-          console.error('API returned error:', json?.error)
+          // 搜索无结果时，清空停车数据
+          this.addParkingMarkers()
+          // console.error('API returned error:', json?.error)
         }
       } catch (error) {
         console.error('Error searching:', error)
+        this.parkingData = []
+        this.addParkingMarkers()
       } finally {
         this.isLoading = false
       }
@@ -529,10 +541,15 @@ export default {
             available: (item.status !== undefined) ? item.status : item.available,
             last_updated: item.last_updated ?? item.status_timestamp ?? null
           }))
-          this.addParkingMarkers()
+          // this.addParkingMarkers()
         } else {
-          console.error('API returned error:', json?.error)
+          // 2km 过滤无结果时，清空停车数据
+          this.parkingData = []
+          // console.error('API returned error:', json?.error)
         }
+        // 不管有没有结果都调用 addParkingMarkers
+        this.addParkingMarkers()
+
       } catch (error) {
         console.error('Error filtering:', error)
       } finally {
