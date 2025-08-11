@@ -1,4 +1,5 @@
 <template>
+  <PasswordGate>
   <div id="app">
     <Navbar />
     <main class="main-content">
@@ -8,15 +9,18 @@
       © 2025 MelMove. All rights reserved.
     </footer>
   </div>
+  </PasswordGate>
 </template>
 
 <script>
 import Navbar from './components/Navbar.vue'
+import PasswordGate from './PasswordGate.vue'
 
 export default {
   name: 'App',
   components: {
-    Navbar
+    Navbar,
+    PasswordGate
   }
 }
 </script>
