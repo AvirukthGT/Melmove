@@ -6,7 +6,7 @@
     <!-- Hero -->
     <header class="hero">
       <div class="hero-text">
-        <h1>Data Insights</h1>
+        <h1>Insights</h1>
         <p class="subtitle">
           Accessible, beautiful insights for Melbourne commuters,how car ownership and CBD population shape congestion and kerbside pressure.
         </p>

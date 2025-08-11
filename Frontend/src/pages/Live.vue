@@ -19,9 +19,9 @@
     <div class="controls-section">
       <div class="search-container">
         <span class="search-icon">🔍</span>
-        <input 
-          type="text" 
-          placeholder="Enter street or area..." 
+        <input
+          type="text"
+          placeholder="Enter street or area..."
           class="search-input"
           v-model="searchQuery"
           @input="handleSearch"
@@ -31,18 +31,18 @@
           Search
         </button>
       </div>
-      
+
       <div class="filter-controls">
-        <button 
-          class="filter-btn" 
+        <button
+          class="filter-btn"
           @click="toggleFilter"
           :class="{ active: isFilterActive }"
         >
           <span class="filter-icon">📍</span>
           {{ isFilterActive ? 'Show All' : '2km Filter' }}
         </button>
-        <button 
-          class="location-btn" 
+        <button
+          class="location-btn"
           @click="centerOnUserLocation"
           v-if="userLocation"
         >
@@ -61,7 +61,7 @@
         <div class="map-container">
           <!-- Google Maps will be loaded here -->
           <div id="map" ref="mapContainer"></div>
-          
+
           <!-- Loading overlay -->
           <div class="loading-overlay" v-if="isLoading || !mapLoaded">
             <div class="loading-spinner"></div>
@@ -76,7 +76,7 @@
           <h3>{{ selectedParking.name }}</h3>
           <button class="close-btn" @click="closePanel">×</button>
         </div>
-        
+
         <div class="info-content">
           <div class="info-item">
             <span class="label">NAME:</span>
@@ -88,39 +88,27 @@
               {{ (selectedParking.lat != null && selectedParking.lng != null) ? `${selectedParking.lat.toFixed(5)}, ${selectedParking.lng.toFixed(5)}` : 'N/A' }}
             </span>
           </div>
-          
-          <div class="info-item">
-            <span class="label">RATES:</span>
-            <div class="rates">
-              <div class="rate-item">
-                <span class="rate-label">HOURLY:</span>
-                <span class="rate-value">AUD ${{ selectedParking.rates.hourly }}</span>
-              </div>
-              <div class="rate-item">
-                <span class="rate-label">DAILY (MAX):</span>
-                <span class="rate-value">AUD ${{ selectedParking.rates.daily }}</span>
-              </div>
-            </div>
-          </div>
-          
+
+
+
           <div class="info-item" v-if="selectedParking.distance">
             <span class="label">DISTANCE:</span>
             <span class="value">{{ selectedParking.distance }}km away</span>
           </div>
-          
+
           <div class="info-item">
             <span class="label">STATUS:</span>
             <span class="value status" :class="selectedParking.available ? 'available' : 'occupied'">
               {{ selectedParking.available ? 'Present' : 'Occupied' }}
             </span>
           </div>
-          
+
           <div class="info-item">
             <span class="label">LAST UPDATED:</span>
             <span class="value">{{ formatLastUpdated(selectedParking.last_updated) }}</span>
           </div>
         </div>
-        
+
         <div class="panel-actions">
           <button class="btn btn-primary" @click="navigateToParking">
             <span class="nav-icon">🧭</span>
@@ -131,7 +119,7 @@
           </button>
         </div>
       </div>
-      
+
       <!-- No parking selected state -->
       <div class="info-panel no-selection" v-else>
         <div class="panel-header">
@@ -186,9 +174,9 @@ export default {
       markers: [],
       userMarker: null,
       showUserLocation: false, // Track if user location should be shown
-      
+
       // Mock data for development - individual parking bays
-      mockParkingData: [    
+      mockParkingData: [
         {
           id: 2,
           name: 'Bay B2 - Wilson Parking',
@@ -228,7 +216,7 @@ export default {
       ]
     }
   },
-  
+
   computed: {
     filteredParkingData() {
       // 1) 默认显示非占用的车位（包含 true 或未知 null/undefined）
@@ -261,25 +249,25 @@ export default {
       return deduped
     }
   },
-  
+
   async mounted() {
     await this.initMap()
     this.getUserLocation()
     this.loadParkingData()
     this.startAutoRefresh()
   },
-  
+
   beforeUnmount() {
     this.stopAutoRefresh()
   },
-  
+
   methods: {
     // Initialize Google Maps
     async initMap() {
       try {
         // Load Google Maps API
         await this.loadGoogleMapsAPI()
-        
+
         // Create map centered on Melbourne
         this.map = new google.maps.Map(this.$refs.mapContainer, {
           center: { lat: -37.8136, lng: 144.9631 },
@@ -290,15 +278,15 @@ export default {
             { featureType: 'poi', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] }  // CHANGED
           ]
         })
-        
+
         this.mapLoaded = true
         console.log('Google Maps loaded successfully')
       } catch (error) {
         console.error('Error loading Google Maps:', error)
-        this.mapLoaded = false 
+        this.mapLoaded = false
       }
     },
-    
+
     // Load Google Maps API
     loadGoogleMapsAPI() {
       return new Promise((resolve, reject) => {
@@ -307,13 +295,13 @@ export default {
           resolve()
           return
         }
-        
+
         // Create script element
         const script = document.createElement('script')
         script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBE47HieWMQx4-EaEKaA5O89TP6Z-GhUsk&libraries=places`
         script.async = true
         script.defer = true
-        
+
         script.onload = () => {
           console.log('Google Maps API script loaded')
           // Add a small delay to ensure Google Maps is fully initialized
@@ -325,16 +313,16 @@ export default {
             }
           }, 100)
         }
-        
+
         script.onerror = () => {
           console.error('Failed to load Google Maps API')
           reject(new Error('Failed to load Google Maps API'))
         }
-        
+
         document.head.appendChild(script)
       })
     },
-    
+
     // Get user location
     getUserLocation() {
       if (navigator.geolocation) {
@@ -358,15 +346,15 @@ export default {
         )
       }
     },
-    
+
     // Add user location marker
     addUserMarker() {
       if (!this.map || !this.userLocation || (this.searchQuery.trim() && !this.showUserLocation)) return
-      
+
       if (this.userMarker) {
         this.userMarker.setMap(null)
       }
-      
+
       this.userMarker = new google.maps.Marker({
         position: this.userLocation,
         map: this.map,
@@ -383,7 +371,7 @@ export default {
         }
       })
     },
-    
+
     // Add parking markers to map
     addParkingMarkers() {
       if (this.map) {
@@ -391,9 +379,9 @@ export default {
         // Clear existing markers
         this.markers.forEach(marker => marker.setMap(null))
         this.markers = []
-        
+
         const bounds = new google.maps.LatLngBounds()
-        
+
         // Add all parking markers
         this.filteredParkingData.forEach(parking => {
           const marker = new google.maps.Marker({
@@ -402,22 +390,22 @@ export default {
             title: parking.name,
             icon: this.getMarkerIcon(parking)
           })
-          
+
           // Add click listener
           marker.addListener('click', (event) => {
             this.selectParking(parking)
           })
-          
+
           this.markers.push(marker)
           bounds.extend({ lat: parking.lat, lng: parking.lng })
         })
-        
+
         // Add user location marker (only if not searching or if user clicked "My Location")
         if (this.userLocation && (!this.searchQuery.trim() || this.showUserLocation)) {
           this.addUserMarker()
           bounds.extend(this.userLocation)
         }
-        
+
         // Let Google Maps automatically fit all markers
         if (!bounds.isEmpty()) {
           this.map.fitBounds(bounds)
@@ -427,11 +415,11 @@ export default {
         this.addFallbackMarkers()
       }
     },
-    
+
     // Get marker icon based on availability
     getMarkerIcon(parking) {
       const color = parking.available ? '#28a745' : '#dc3545' // Green for available, red for occupied
-      
+
       return {
         url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
           <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
@@ -443,7 +431,7 @@ export default {
         anchor: new google.maps.Point(15, 15)
       }
     },
-    
+
     // Load parking data from API
     async loadParkingData() {
       this.isLoading = true
@@ -479,14 +467,14 @@ export default {
         this.isLoading = false
       }
     },
-    
+
     // Search functionality
     async performSearch() {
       if (!this.searchQuery.trim()) {
         this.loadParkingData()
         return
       }
-      
+
       // Reset user location display when searching
       this.showUserLocation = false
       this.isLoading = true
@@ -517,7 +505,7 @@ export default {
         this.isLoading = false
       }
     },
-    
+
     // Toggle 2km filter
     async toggleFilter() {
       this.isFilterActive = !this.isFilterActive
@@ -530,7 +518,7 @@ export default {
         const res = await fetch(`${API_BASE}/api/merged-parking?lat=${lat}&lng=${lng}&radiusKm=2`, { cache: 'no-store' })
         const json = await res.json()
         const items = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : [])
-      
+
         if (items.length) {
           this.parkingData = items.map((item, idx) => ({
             id: item.id ?? idx,
@@ -554,13 +542,13 @@ export default {
         this.loadParkingData() // 取消过滤时回到全量
       }
     },
-    
+
     // Select parking
     selectParking(parking) {
       console.log('Parking selected:', parking.name)
       this.selectedParking = parking
     },
-    
+
     // Navigate to parking
     navigateToParking() {
       if (this.selectedParking && this.selectedParking.lat && this.selectedParking.lng) {
@@ -568,12 +556,12 @@ export default {
         window.open(url, '_blank')
       }
     },
-    
+
     // Close panel
     closePanel() {
       this.selectedParking = null
     },
-    
+
     // Refresh data
     refreshData() {
       this.loadParkingData()
@@ -593,7 +581,7 @@ export default {
         // Google Maps implementation
         this.map.setCenter(this.userLocation)
         this.map.setZoom(15) // Zoom in closer to user location
-        
+
         // Ensure user marker is visible
         if (this.userMarker) {
           this.userMarker.setMap(this.map)
@@ -654,17 +642,17 @@ export default {
       `
       userMarker.textContent = '📍'
       userMarker.title = 'Your Location'
-      
+
       mapContainer.appendChild(userMarker)
     },
-    
+
     // Start auto refresh
     startAutoRefresh() {
       this.autoRefreshInterval = setInterval(() => {
         this.loadParkingData()
       }, 600000) // 10 minutes
     },
-    
+
     // Stop auto refresh
     stopAutoRefresh() {
       if (this.autoRefreshInterval) {
@@ -1191,7 +1179,7 @@ export default {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  
+
   .info-panel {
     order: -1;
   }
@@ -1201,16 +1189,16 @@ export default {
   .live-page {
     padding: 15px;
   }
-  
+
   .header-content {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .header-content h1 {
     font-size: 2rem;
   }
-  
+
   .header-controls {
     flex-direction: column;
     align-items: flex-start;
@@ -1228,27 +1216,27 @@ export default {
     flex-wrap: wrap;
     gap: 10px;
   }
-  
+
   .parking-count {
     order: -1;
     width: 100%;
     justify-content: center;
   }
-  
+
   .map-container {
     height: 400px;
   }
-  
+
   .panel-actions {
     flex-direction: column;
   }
-  
+
   .legend {
     flex-direction: column;
     gap: 10px;
     align-items: center;
   }
-  
+
   .legend-item {
     width: fit-content;
   }
