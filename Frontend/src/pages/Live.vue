@@ -395,8 +395,7 @@ export default {
         const bounds = new google.maps.LatLngBounds()
         
         // Add all parking markers
-        this.filteredParkingData.filter(parking => parking.available)
-        .forEach(parking => {
+        this.filteredParkingData.forEach(parking => {
           const marker = new google.maps.Marker({
             position: { lat: parking.lat, lng: parking.lng },
             map: this.map,
