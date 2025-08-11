@@ -47,7 +47,6 @@ app.use(cors({
   credentials: false
 }));
 
-app.options('*', cors());
 app.use(express.json());
 
 app.get('/api/merged-parking', async (req, res) => {
