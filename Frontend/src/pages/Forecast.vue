@@ -16,15 +16,6 @@
             v-model="searchArea"
           />
         </div>
-        <div class="input-group">
-          <span class="input-icon">📅</span>
-          <input
-            type="text"
-            placeholder="select your date and time"
-            class="search-input"
-            v-model="selectedDateTime"
-          />
-        </div>
         <button class="continue-btn" @click="onContinue" :disabled="loading">
           {{ loading ? 'Loading...' : 'CONTINUE' }}
         </button>
@@ -71,7 +62,6 @@ export default {
   data() {
     return {
       searchArea: 'Lonsdale St',
-      selectedDateTime: '',
       loading: false,
       error: '',
       result: null,
@@ -195,6 +185,7 @@ export default {
   position: relative;
   flex: 1;
   min-width: 250px;
+  max-width: 400px;
 }
 
 .input-icon {
@@ -569,9 +560,9 @@ export default {
     flex-direction: column;
     gap: 5px;
   }
- /* 新增：限制图表在小屏幕上的高度 */
+
   .chart-container img {
-      height: 250px; /* 手机上高度缩小 */
+      height: 250px; 
   }
   
 }
