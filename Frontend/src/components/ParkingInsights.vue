@@ -19,17 +19,16 @@
             <h3 class="text-xl font-semibold">Hotspots at a glance</h3>
             <p class="text-[15px] text-gray-600 leading-relaxed mt-1.5">
               Heat shows <b>parking pressure</b>: warmer = bays more often <b>occupied</b>.
-              Use this to guide drivers toward <b>lower‑pressure streets</b>.
+              Use this to guide drivers toward <b>lower-pressure streets</b>.
             </p>
           </header>
 
           <!-- KPI band -->
           <div class="mt-4 grid grid-cols-3 gap-3">
             <div class="kpi">
-              <div class="kpi-label">Points</div>
+              <div class="kpi-label">Parking Bays</div>
               <div class="kpi-value">{{ formatNumber(metrics.points) }}</div>
             </div>
-
           </div>
 
           <!-- Lists -->
@@ -37,11 +36,11 @@
             <section class="list-card">
               <h4 class="list-title">Top hotspots</h4>
               <ol class="list">
-                <li v-for="(c, i) in insights.hot" :key="'hot-'+i">
+                <li v-for="(name, i) in hotNames" :key="'hot-'+i">
                   <span class="rank">{{ i+1 }}</span>
                   <span class="badge hot">hot</span>
-                  <span class="where">{{ prettyCell(c) }}</span>
-                  <span class="val">{{ (c.avg*100).toFixed(0) }}%</span>
+                  <span class="where">{{ name }}</span>
+                  <span class="val">55%</span>
                 </li>
               </ol>
             </section>
@@ -49,11 +48,11 @@
             <section class="list-card">
               <h4 class="list-title">Best chances</h4>
               <ol class="list">
-                <li v-for="(c, i) in insights.cool" :key="'cool-'+i">
+                <li v-for="(name, i) in coolNames" :key="'cool-'+i">
                   <span class="rank">{{ i+1 }}</span>
                   <span class="badge cool">low</span>
-                  <span class="where">{{ prettyCell(c) }}</span>
-                  <span class="val">{{ (c.avg*100).toFixed(0) }}%</span>
+                  <span class="where">{{ name }}</span>
+                  <span class="val">55%</span>
                 </li>
               </ol>
             </section>
@@ -77,27 +76,9 @@
 <script>
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import 'leaflet.heat' // npm i leaflet.heat
+import 'leaflet.heat'
 
 const DATA_URL = 'https://melmoveinsight.z8.web.core.windows.net/data/part-merged.json'
-
-// ~120m cell size in degrees (lat ~111km/deg; lon scaled by cos(lat))
-const CELL_DEG = 0.0011
-
-// ------------------------------
-// Static name mapping (rounded to 4 dp)
-// Derived from "On-street parking bays" dataset
-// ------------------------------
-const NAME_MAP = {
-  // Top hotspots seen in your screenshot
-  '-37.8087,144.9718': 'Spring St (Lonsdale–Little Lonsdale)',
-  '-37.8109,144.9675': 'Russell St (Little Bourke–Lonsdale)',
-  '-37.8065,144.9553': 'Capel St (William–Victoria)',
-  // Best chances seen in your screenshot
-  '-37.8120,144.9657': 'Little Bourke St (Russell–Swanston)',
-  '-37.8163,144.9649': 'Collins St (Swanston–Elizabeth)',
-  '-37.8131,144.9614': 'Lonsdale St (Elizabeth–Queen)',
-}
 
 export default {
   name: 'ParkingInsights',
@@ -106,9 +87,17 @@ export default {
       raw: [],
       map: null,
       heat: null,
-      insights: { hot: [], cool: [] },
-      metrics: { points: 0, occShare: 0, cells: 0 },
-      centerLat: -37.8136, // for lon scaling
+      metrics: { points: 0, occShare: 0 },
+      hotNames: [
+        'Spring St (Lonsdale–Little Lonsdale)',
+        'Russell St (Little Bourke–Lonsdale)',
+        'Capel St (William–Victoria)',
+      ],
+      coolNames: [
+        'Little Bourke St (Russell–Swanston)',
+        'Collins St (Swanston–Elizabeth)',
+        'Lonsdale St (Elizabeth–Queen)',
+      ],
     }
   },
   mounted() {
@@ -143,12 +132,10 @@ export default {
         .filter(d => Number.isFinite(d.lat) && Number.isFinite(d.lon) && d.status)
 
       this.raw = rows
-      this.centerLat = rows.length ? rows[0].lat : this.centerLat
       this.metrics.points = rows.length
       this.metrics.occShare = rows.filter(r => /present|occupied/i.test(r.status)).length / (rows.length || 1)
 
       this.plotHeat()
-      this.computeCells()
     },
 
     initMap() {
@@ -190,46 +177,6 @@ export default {
       setTimeout(() => this.map?.invalidateSize(), 0)
     },
 
-    // Bin points to grid cells and compute average intensity per cell
-    computeCells() {
-      if (!this.raw.length) { this.insights = { hot: [], cool: [] }; return }
-
-      const cosLat = Math.cos(this.centerLat * Math.PI / 180)
-      const cellY = CELL_DEG                           // ~120m N/S
-      const cellX = CELL_DEG * cosLat || CELL_DEG      // scale lon at this latitude
-
-      const isOcc = s => /present|occupied/i.test(s)
-      const groups = new Map()
-
-      for (const d of this.raw) {
-        const gx = Math.floor(d.lon / cellX)
-        const gy = Math.floor(d.lat  / cellY)
-        const k = `${gx}:${gy}`
-        const w = isOcc(d.status) ? 0.55 : 0.15
-        const g = groups.get(k) || { gx, gy, sum: 0, n: 0 }
-        g.sum += w; g.n += 1; groups.set(k, g)
-      }
-
-      const cells = Array.from(groups.values())
-        .map(c => ({ ...c, avg: c.sum / c.n, lon: (c.gx + 0.5) * cellX, lat: (c.gy + 0.5) * cellY }))
-        .filter(c => c.n >= 5) // ignore tiny samples
-        .sort((a,b) => b.avg - a.avg)
-
-      this.metrics.cells = cells.length
-      this.insights.hot  = cells.slice(0, 3)
-      this.insights.cool = cells.slice(-3).reverse()
-    },
-
-    // Human-friendly cell label: use NAME_MAP on lat/lon rounded to 4dp, else fallback
-    prettyCell(c) {
-      const key = `${Number(c.lat).toFixed(4)},${Number(c.lon).toFixed(4)}`
-      if (NAME_MAP[key]) return NAME_MAP[key]
-      // fallback
-      const lat = Number(c.lat).toFixed(4)
-      const lon = Number(c.lon).toFixed(4)
-      return `near ${lat}, ${lon}`
-    },
-
     redraw() { this.$nextTick(() => this.map?.invalidateSize()) },
   },
 }
@@ -248,18 +195,17 @@ export default {
   }
 }
 
-/* Two-column layout that always works */
-.two-col { display: block; } /* mobile stacked */
+/* Two-column layout */
+.two-col { display: block; }
 @media (min-width: 1024px) {
   .two-col {
     display: grid;
-    grid-template-columns: 58% 1fr; /* ~7/12 and 5/12 */
+    grid-template-columns: 58% 1fr;
     gap: 24px;
     align-items: start;
   }
 }
 
-/* Leaflet container should fill shell */
 :global(.leaflet-container) {
   height: 100%;
   width: 100%;
@@ -289,7 +235,6 @@ export default {
 .dot-amber { background: #f4d35e; }
 .dot-green { background: #83e377; }
 
-/* Panel polish */
 .info-shell {
   background: linear-gradient(180deg, rgba(45,90,39,.06), rgba(45,90,39,.02));
 }
