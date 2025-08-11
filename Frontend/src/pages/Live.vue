@@ -137,7 +137,7 @@
               </div>
               <div class="legend-item">
                 <span class="legend-marker available"></span>
-                <span>Present</span>
+                <span>Unoccupied</span>
               </div>
             </div>
           </div>
