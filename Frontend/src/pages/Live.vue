@@ -165,9 +165,9 @@
 </template>
 
 <script>
-//const API_BASE = 'https://melmove.onrender.com'
+const API_BASE = 'https://melmove.onrender.com'
 // Use Vite dev proxy: keep empty so requests go to '/api' and are proxied to 3000
-const API_BASE = ''
+// const API_BASE = ''
 
 export default {
   name: 'Live',
