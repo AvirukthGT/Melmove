@@ -10,25 +10,34 @@ const { getParkingData } = require('./services/parkingService');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Add CORS support
+// ===== Global CORS configuration (must be placed before routes) =====
+const allowedOrigins = [
+  /^http:\/\/localhost:\d+$/,                // local development
+  /^http:\/\/127\.0\.0\.1:\d+$/,              // local development
+  /^https:\/\/melmove\.vercel\.app$/,         // production
+  /^https:\/\/melmove-git-.*\.vercel\.app$/   // Vercel preview
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
-    'http://localhost:8080',
-    'http://localhost:3000',
-    'http://127.0.0.1:8080',
-    'https://melmove.vercel.app/'
-  ],
-  credentials: true
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); //  Allow no origin (Postman/health check)
+    const ok = allowedOrigins.some(pattern => pattern.test(origin));
+    if (ok) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
 }));
 
-// JSON express
+// Handling OPTIONS preflight requests
+app.options('*', cors());
+// ============================================
+
+// JSON Parsing
 app.use(express.json());
 
-// Define API routes
+// ===== router =====
 // Get parking data (support keywords search & distance filter)
 app.get('/api/merged-parking', async (req, res) => {
   try {
@@ -66,10 +75,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Start server listening
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`API endpoint: http://localhost:${PORT}/api/merged-parking`);
 });
-
