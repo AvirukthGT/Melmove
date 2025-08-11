@@ -30,3 +30,21 @@ coverage
 *.tsbuildinfo
 
 Backend/.env
+
+__pycache__/
+*.pyc
+
+
+# 追加到项目根 .gitignore（若已有就只加缺的）
+echo __pycache__/>> .gitignore
+echo *.pyc>> .gitignore
+echo Frontend/node_modules/>> .gitignore
+echo Frontend/dist/>> .gitignore
+echo Frontend/.env*>> .gitignore
+
+
+__pycache__/
+*.pyc
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.env*

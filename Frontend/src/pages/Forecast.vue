@@ -9,18 +9,18 @@
       <div class="search-inputs">
         <div class="input-group">
           <span class="input-icon">🔍</span>
-          <input 
-            type="text" 
-            placeholder="enter area..." 
+          <input
+            type="text"
+            placeholder="enter area..."
             class="search-input"
             v-model="searchArea"
           />
         </div>
         <div class="input-group">
           <span class="input-icon">📅</span>
-          <input 
-            type="text" 
-            placeholder="select your date and time" 
+          <input
+            type="text"
+            placeholder="select your date and time"
             class="search-input"
             v-model="selectedDateTime"
           />
@@ -36,11 +36,9 @@
       {{ error }}
     </div>
 
-    <!-- 预测结果 -->
+    <!-- 预测结果：只保留一张折线图卡片 -->
     <div class="forecast-visualizations" v-if="result">
-      <div class="chart-grid">
-
-        <!-- Line Chart (来自 predict_plot) -->
+      <div class="chart-grid one-col">
         <div class="chart-card">
           <div class="chart-header">
             <div class="chart-title">{{ chartTitle }}</div>
@@ -52,55 +50,20 @@
               </span>
             </div>
           </div>
-          <div class="chart-container" style="text-align:center;">
-            <img v-if="plotSrc" :src="plotSrc" alt="Prediction Plot" style="max-width:100%; max-height:200px;">
+
+          <div style="width: 100%; overflow-x: auto; display: flex; justify-content: center;">
+            <img v-if="plotSrc" :src="plotSrc" alt="Prediction Plot" style="max-width:100%; max-height:400px; object-fit:contain;">
           </div>
+
           <div class="chart-description">
             line chart - from API /predict_plot
           </div>
         </div>
-
-        <!-- Bar Chart -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">{{ chartTitle }}</div>
-            <div class="chart-meta" v-if="predictedNow">
-              <span class="time">{{ formatTime(predictedNow.time) }}</span>
-              <span class="prediction">Predicted: {{ predictedNow.y.toFixed(0) }} spots</span>
-              <span class="confidence">
-                Confidence: {{ calcConfidence(predictedNow).toFixed(0) }}%
-              </span>
-            </div>
-          </div>
-          <div class="chart-container">
-            <div class="bar-chart">
-              <div class="chart-y-axis">
-                <span>{{ result.history.max }}</span>
-                <span>{{ (result.history.max/1.5).toFixed(0) }}</span>
-                <span>{{ (result.history.max/3).toFixed(0) }}</span>
-                <span>0</span>
-              </div>
-              <div class="chart-content">
-                <div class="bars">
-                  <div 
-                    v-for="(p, idx) in result.predictions" 
-                    :key="idx" 
-                    class="bar" 
-                    :style="{ height: `${(p.y/result.history.max)*100}%` }"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="chart-description">
-            bar chart - based on predicted values
-          </div>
-        </div>
-
       </div>
     </div>
   </div>
 </template>
+
 
 <script>
 export default {
@@ -116,8 +79,11 @@ export default {
     }
   },
   computed: {
+    // 自动根据环境切换 API 域名
     apiBase() {
-      return import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+      return import.meta.env.DEV
+        ? 'http://localhost:8000'
+        : 'https://melmove.onrender.com';
     },
     chartTitle() {
       return this.searchArea || 'All Zones';
@@ -132,10 +98,9 @@ export default {
         0,
         ...(this.result?.predictions?.map(p => Number(p.hi ?? p.y ?? 0)) || [0])
       );
-    const max = Math.max(histMax, predMax);
-    return max > 0 ? max : 1; // 防止除 0
-  },
-
+      const max = Math.max(histMax, predMax);
+      return max > 0 ? max : 1; // 防止除 0
+    }
   },
   methods: {
     formatTime(t) {
@@ -188,6 +153,11 @@ export default {
 
 
 <style scoped>
+
+.chart-grid.one-col {
+  grid-template-columns: 1fr; /* 只显示一列 */
+}
+
 .forecast-page {
   padding: 100px 20px 40px;
   max-width: 1400px;
@@ -595,5 +565,10 @@ export default {
     flex-direction: column;
     gap: 5px;
   }
+ /* 新增：限制图表在小屏幕上的高度 */
+  .chart-container img {
+      height: 250px; /* 手机上高度缩小 */
+  }
+  
 }
 </style>

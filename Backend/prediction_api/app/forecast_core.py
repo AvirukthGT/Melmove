@@ -109,7 +109,7 @@ def parse_api_records(records):
 
 def load_and_clean_data(zone_filter: str = "") -> pd.Series:
     """
-    拉取并整理数据 -> 返回按小时聚合的 Series（index=小时，值=唯一车位数）
+    拉取并整理数据 -> 返回按小时聚合的 Series(index=小时，值=唯一车位数）
     """
     try:
         api_records = fetch_api_data(zone_filter, MAX_RECORDS)
@@ -207,7 +207,7 @@ def create_features(ts: pd.Series):
 
 
 def forecast_with_ml(ts: pd.Series, prediction_length: int):
-    """返回：predictions, lower_bound, upper_bound, model_name"""
+    """返回:predictions, lower_bound, upper_bound, model_name"""
     try:
         if len(ts) < 50:
             recent_mean = ts.tail(min(24, len(ts))).mean()
