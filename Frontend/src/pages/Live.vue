@@ -219,27 +219,13 @@ export default {
 
   computed: {
     filteredParkingData() {
-      // 1) 默认显示非占用的车位（包含 true 或未知 null/undefined）
-      let result = this.parkingData.filter(parking => parking.available !== false)
+      // 1) 仅过滤掉明确占用(false)的，保留 true 或 null/undefined
+      const base = this.parkingData.filter(p => p.available !== false)
 
-      // 2) 若开启 2km 过滤，则按距离筛选
-      if (this.isFilterActive && this.userLocation) {
-        result = result.filter(parking => {
-          const distance = this.calculateDistance(
-            this.userLocation.lat,
-            this.userLocation.lng,
-            parking.lat,
-            parking.lng
-          )
-          parking.distance = distance.toFixed(1)
-          return distance <= 2
-        })
-      }
-
-      // 3) 去重（优先使用后端提供的 id，否则降级到坐标+名称）
+      // 2) 去重（优先用 id，否则用 坐标+名称）
       const seen = new Set()
       const deduped = []
-      for (const p of result) {
+      for (const p of base) {
         const key = p.id ?? `${Number(p.lat).toFixed(5)},${Number(p.lng).toFixed(5)},${p.name}`
         if (!seen.has(key)) {
           seen.add(key)
