@@ -8,6 +8,13 @@ const cors = require('cors');
 const { getParkingData } = require('./services/parkingService');
 
 const app = express();
+
+// Log environment variables with ${..} for debugging
+Object.entries(process.env)
+  .filter(([k,v]) => typeof v === 'string' && /\$\{.+\}/.test(v))
+  .forEach(([k,v]) => console.log('[ENV with ${..}]', k, '=', v));
+
+
 const PORT = process.env.PORT || 3000;
 
 // ===== Global CORS configuration (must be placed before routes) =====
@@ -80,3 +87,4 @@ app.listen(PORT, () => {
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`API endpoint: http://localhost:${PORT}/api/merged-parking`);
 });
+
