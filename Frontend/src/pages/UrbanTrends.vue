@@ -793,7 +793,7 @@ path, .grid line{ pointer-events:none }
 /* Invisible hit area so small labels are easy to tap */
 .tick-hit{ fill: transparent; cursor: pointer }
 
-/* Vertical guide line shown on hover/tap */
+/* Vertical guide line shown on hover */
 .axis .guide{
   stroke: var(--accent);
   stroke-opacity: .15;
