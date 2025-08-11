@@ -4,17 +4,12 @@
       <h1>FORECAST</h1>
     </div>
 
-    <!-- 搜索区域 -->
+    <!-- 静态显示区域信息 -->
     <div class="search-section">
       <div class="search-inputs">
         <div class="input-group">
-          <span class="input-icon">🔍</span>
-          <input
-            type="text"
-            placeholder="enter area..."
-            class="search-input"
-            v-model="searchArea"
-          />
+          <span class="info-icon">📍</span>
+          <span class="area-info">For all zones on Melbourne CBD</span>
         </div>
         <button class="continue-btn" @click="onContinue" :disabled="loading">
           {{ loading ? 'Loading...' : 'CONTINUE' }}
@@ -61,7 +56,6 @@ export default {
   name: 'Forecast',
   data() {
     return {
-      searchArea: 'Lonsdale St',
       loading: false,
       error: '',
       result: null,
@@ -80,7 +74,7 @@ export default {
         : 'https://melmove.onrender.com';
     },
     chartTitle() {
-      return this.searchArea || 'All Zones';
+      return 'All Zones On Melbourne CBD - 24 Hours Prediction';
     },
     predictedNow() {
       if (!this.result?.predictions?.length) return null;
@@ -93,7 +87,7 @@ export default {
         ...(this.result?.predictions?.map(p => Number(p.hi ?? p.y ?? 0)) || [0])
       );
       const max = Math.max(histMax, predMax);
-      return max > 0 ? max : 1; // 防止除 0
+      return max > 0 ? max : 1;
     }
   },
   methods: {
@@ -124,7 +118,7 @@ export default {
       }
     },
     async fetchPredict() {
-      const qs = this.buildQuery({ zone: this.searchArea, hours: 24 });
+      const qs = this.buildQuery({ hours: 24 });
       const url = `${this.apiBase}/predict${qs ? `?${qs}` : ''}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -133,7 +127,7 @@ export default {
       this.result = data;
     },
     async fetchPlot() {
-      const qs = this.buildQuery({ zone: this.searchArea, hours: 24 });
+      const qs = this.buildQuery({ hours: 24 });
       const url = `${this.apiBase}/predict_plot${qs ? `?${qs}` : ''}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Plot HTTP ${res.status}`);
@@ -149,7 +143,7 @@ export default {
 <style scoped>
 
 .chart-grid.one-col {
-  grid-template-columns: 1fr; /* 只显示一列 */
+  grid-template-columns: 1fr;
 }
 
 .forecast-page {
@@ -223,6 +217,7 @@ export default {
   cursor: pointer;
   transition: var(--transition);
   font-size: 1rem;
+  white-space: nowrap;
 }
 
 .continue-btn:hover {
