@@ -81,6 +81,10 @@ export default {
   computed: {
     // 自动根据环境切换 API 域名
     apiBase() {
+      // 首选 .env 中的变量
+      const fromEnv = import.meta.env.VITE_API_BASE_URL;
+      if (fromEnv) return fromEnv;
+      // 兜底：本地开发/临时默认
       return import.meta.env.DEV
         ? 'http://localhost:8000'
         : 'https://melmove.onrender.com';
