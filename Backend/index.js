@@ -83,6 +83,44 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ===== for python prediction api =====
+const PREDICT_API_BASE = process.env.PREDICT_API_BASE; // 在 Render 环境变量里配置，https://melmove-python-prediction.onrender.com
+if (!PREDICT_API_BASE) {
+  console.warn('[WARN] PREDICT_API_BASE not set. Prediction routes will not work.');
+}
+
+// /predict —— 透传 JSON 数据
+app.get('/predict', async (req, res) => {
+  try {
+    const { zone = '', hours = '24' } = req.query;
+    const url = `${PREDICT_API_BASE}/predict?zone=${encodeURIComponent(zone)}&hours=${encodeURIComponent(hours)}`;
+    const r = await fetch(url);
+    const text = await r.text();
+    res.status(r.status);
+    res.setHeader('Content-Type', r.headers.get('content-type') || 'application/json; charset=utf-8');
+    res.send(text);
+  } catch (e) {
+    console.error('Proxy /predict error:', e);
+    res.status(502).json({ ok: false, error: { code: 'PREDICT_UPSTREAM_ERROR', message: String(e) } });
+  }
+});
+
+// /predict_plot —— 透传 PNG 图
+app.get('/predict_plot', async (req, res) => {
+  try {
+    const { zone = '', hours = '24' } = req.query;
+    const url = `${PREDICT_API_BASE}/predict_plot?zone=${encodeURIComponent(zone)}&hours=${encodeURIComponent(hours)}`;
+    const r = await fetch(url);
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.status(r.status);
+    res.setHeader('Content-Type', r.headers.get('content-type') || 'image/png');
+    res.send(buf);
+  } catch (e) {
+    console.error('Proxy /predict_plot error:', e);
+    res.status(502).json({ ok: false, error: { code: 'PREDICT_UPSTREAM_ERROR', message: String(e) } });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
