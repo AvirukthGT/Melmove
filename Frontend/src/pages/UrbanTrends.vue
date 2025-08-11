@@ -313,58 +313,82 @@ export default {
 
     /* ---------- Chart A ---------- */
     drawChartA(){
-      const el=this.$refs.chartA, data=this.timeseries
-      if(!el) return
-      const w=el.clientWidth||920, h=400, m={top:28,right:76,bottom:52,left:68}
-      const svg=d3.select(el).html('').append('svg').attr('width',w).attr('height',h)
-      const plot=svg.append('g').attr('transform',`translate(${m.left},${m.top})`)
-      const iw=w-m.left-m.right, ih=h-m.top-m.bottom
-      const x=d3.scaleLinear().domain(d3.extent(data,d=>d.Year)).range([0,iw])
-      const yL=d3.scaleLinear().domain([d3.min(data,d=>d.Vehicles)*.995,d3.max(data,d=>d.Vehicles)*1.005]).range([ih,0])
-      const yR=d3.scaleLinear().domain([d3.min(data,d=>d.VehiclesPer1000MetroResidents)*.995,d3.max(data,d=>d.VehiclesPer1000MetroResidents)*1.005]).range([ih,0])
+  const el=this.$refs.chartA, data=this.timeseries
+  if(!el) return
 
-      const defs=svg.append('defs')
-      const grad=defs.append('linearGradient').attr('id','veh-grad').attr('x1','0%').attr('x2','0%').attr('y1','0%').attr('y2','100%')
-      grad.append('stop').attr('offset','0%').attr('stop-color', BRAND).attr('stop-opacity',0.18)
-      grad.append('stop').attr('offset','100%').attr('stop-color', BRAND).attr('stop-opacity',0.04)
-      const glow=defs.append('filter').attr('id','glow')
-      glow.append('feGaussianBlur').attr('stdDeviation','3').attr('result','blur')
-      const feMerge=glow.append('feMerge'); feMerge.append('feMergeNode').attr('in','blur'); feMerge.append('feMergeNode').attr('in','SourceGraphic')
+  const w=el.clientWidth||920, h=400, m={top:28,right:76,bottom:52,left:68}
+  const svg=d3.select(el).html('').append('svg').attr('width',w).attr('height',h)
+  const plot=svg.append('g').attr('transform',`translate(${m.left},${m.top})`)
+  const iw=w-m.left-m.right, ih=h-m.top-m.bottom
 
-      plot.append('g').call(d3.axisLeft(yL).ticks(5).tickSize(-iw).tickFormat(''))
-           .selectAll('line').attr('stroke','var(--grid)')
+  const x=d3.scaleLinear().domain(d3.extent(data,d=>d.Year)).range([0,iw])
+  const yL=d3.scaleLinear()
+    .domain([d3.min(data,d=>d.Vehicles)*.995, d3.max(data,d=>d.Vehicles)*1.005]).range([ih,0])
+  const yR=d3.scaleLinear()
+    .domain([d3.min(data,d=>d.VehiclesPer1000MetroResidents)*.995, d3.max(data,d=>d.VehiclesPer1000MetroResidents)*1.005]).range([ih,0])
 
-      const area=d3.area().x(d=>x(d.Year)).y0(ih).y1(d=>yL(d.Vehicles)).curve(d3.curveCatmullRom.alpha(0.5))
-      const line=d3.line().x(d=>x(d.Year)).y(d=>yR(d.VehiclesPer1000MetroResidents)).curve(d3.curveCatmullRom.alpha(0.5))
+  const defs=svg.append('defs')
+  const grad=defs.append('linearGradient').attr('id','veh-grad').attr('x1','0%').attr('x2','0%').attr('y1','0%').attr('y2','100%')
+  grad.append('stop').attr('offset','0%').attr('stop-color', BRAND).attr('stop-opacity',0.18)
+  grad.append('stop').attr('offset','100%').attr('stop-color', BRAND).attr('stop-opacity',0.04)
+  const glow=defs.append('filter').attr('id','glow')
+  glow.append('feGaussianBlur').attr('stdDeviation','3').attr('result','blur')
+  const feMerge=glow.append('feMerge'); feMerge.append('feMergeNode').attr('in','blur'); feMerge.append('feMergeNode').attr('in','SourceGraphic')
 
-      const areaPath=plot.append('path').datum(data)
-        .attr('fill','url(#veh-grad)')
-        .attr('d',d3.area().x(d=>x(d.Year)).y0(ih).y1(()=>ih).curve(d3.curveCatmullRom.alpha(0.5)))
-      areaPath.transition().duration(900).ease(d3.easeCubicOut).attr('d',area)
+  // subtle grid
+  plot.append('g')
+    .call(d3.axisLeft(yL).ticks(5).tickSize(-iw).tickFormat(''))
+    .selectAll('line').attr('stroke','var(--grid)')
 
-      const linePath=plot.append('path').datum(data).attr('fill','none').attr('stroke', BRAND).attr('stroke-width',3).attr('filter','url(#glow)').attr('d',line)
-      const L=linePath.node().getTotalLength()
-      linePath.attr('stroke-dasharray',`${L} ${L}`).attr('stroke-dashoffset',L)
-        .transition().duration(900).delay(120).ease(d3.easeCubicOut).attr('stroke-dashoffset',0)
+  const area=d3.area().x(d=>x(d.Year)).y0(ih).y1(d=>yL(d.Vehicles)).curve(d3.curveCatmullRom.alpha(0.5))
+  const line=d3.line().x(d=>x(d.Year)).y(d=>yR(d.VehiclesPer1000MetroResidents)).curve(d3.curveCatmullRom.alpha(0.5))
 
-      plot.selectAll('.dot').data(data).enter().append('circle')
-        .attr('class','dot').attr('cx',d=>x(d.Year)).attr('cy',d=>yR(d.VehiclesPer1000MetroResidents))
-        .attr('r',4).attr('fill', BRAND)
-        .style('opacity',0).transition().delay((_,i)=>200+i*70).duration(400).style('opacity',1)
+  const areaPath=plot.append('path').datum(data)
+    .attr('fill','url(#veh-grad)')
+    .attr('d',d3.area().x(d=>x(d.Year)).y0(ih).y1(()=>ih).curve(d3.curveCatmullRom.alpha(0.5)))
+  areaPath.transition().duration(900).ease(d3.easeCubicOut).attr('d',area)
 
-      plot.append('g').attr('transform',`translate(0,${ih})`).call(d3.axisBottom(x).ticks(data.length).tickFormat(d3.format('d')))
-      plot.append('g').call(d3.axisLeft(yL).ticks(5).tickFormat(d3.format(',')))
-      plot.append('g').attr('transform',`translate(${iw},0)`).call(d3.axisRight(yR).ticks(5))
+  const linePath=plot.append('path').datum(data)
+    .attr('fill','none').attr('stroke', BRAND).attr('stroke-width',3)
+    .attr('filter','url(#glow)').attr('d',line)
+  const L=linePath.node().getTotalLength()
+  linePath.attr('stroke-dasharray',`${L} ${L}`).attr('stroke-dashoffset',L)
+    .transition().duration(900).delay(120).ease(d3.easeCubicOut).attr('stroke-dashoffset',0)
 
-      const tooltip=d3.select(this.$refs.tooltip)
-      plot.selectAll('.hitA').data(data).enter().append('circle')
-        .attr('class','hitA').attr('cx',d=>x(d.Year)).attr('cy',d=>yR(d.VehiclesPer1000MetroResidents))
-        .attr('r',16).style('fill','transparent').style('pointer-events','all')
-        .on('mouseenter',(e,d)=>{ this.hoverA=d; tooltip.style('opacity',1).style('left',`${e.clientX+16}px`).style('top',`${e.clientY-12}px`).html(`<div class='tt-year'>${d.Year}</div><div><b>Vehicles</b> ${d3.format(',')(d.Vehicles)}</div><div><b>Per 1k</b> ${d.VehiclesPer1000MetroResidents.toFixed(1)}</div>`) })
-        .on('mousemove',e=> tooltip.style('left',`${e.clientX+16}px`).style('top',`${e.clientY-12}px`))
-        .on('mouseleave',()=>{ this.hoverA=null; tooltip.style('opacity',0) })
-      d3.select(el).on('mouseleave',()=> tooltip.style('opacity',0))
-    },
+  plot.selectAll('.dot').data(data).enter().append('circle')
+    .attr('class','dot').attr('cx',d=>x(d.Year)).attr('cy',d=>yR(d.VehiclesPer1000MetroResidents))
+    .attr('r',4).attr('fill', BRAND)
+    .style('opacity',0).transition().delay((_,i)=>200+i*70).duration(400).style('opacity',1)
+
+  /* --- Axes with adaptive ticks + interactions --- */
+  const xTickCount = iw < 360 ? 3 : iw < 520 ? 5 : iw < 760 ? 7 : data.length
+  const xAxis = d3.axisBottom(x).ticks(xTickCount).tickFormat(d3.format('d'))
+  const yLAxis = d3.axisLeft(yL).ticks(5).tickFormat(d3.format(','))
+  const yRAxis = d3.axisRight(yR).ticks(5)
+
+  plot.append('g').attr('class','axis x')
+    .attr('transform',`translate(0,${ih})`).call(xAxis)
+  this.decorateXAxis(plot.select('.axis.x'), x, ih)   // ⬅ requires helper below
+
+  plot.append('g').attr('class','axis yL').call(yLAxis)
+  this.decorateYAxis(plot.select('.axis.yL'), ih)     // ⬅ requires helper below
+
+  plot.append('g').attr('class','axis yR')
+    .attr('transform',`translate(${iw},0)`).call(yRAxis)
+  this.decorateYAxis(plot.select('.axis.yR'), ih)
+
+  // tooltip hits
+  const tooltip=d3.select(this.$refs.tooltip)
+  plot.selectAll('.hitA').data(data).enter().append('circle')
+    .attr('class','hitA').attr('cx',d=>x(d.Year)).attr('cy',d=>yR(d.VehiclesPer1000MetroResidents))
+    .attr('r',16).style('fill','transparent').style('pointer-events','all')
+    .on('mouseenter',(e,d)=>{ this.hoverA=d; tooltip.style('opacity',1).style('left',`${e.clientX+16}px`).style('top',`${e.clientY-12}px`)
+      .html(`<div class='tt-year'>${d.Year}</div><div><b>Vehicles</b> ${d3.format(',')(d.Vehicles)}</div><div><b>Per 1k</b> ${d.VehiclesPer1000MetroResidents.toFixed(1)}</div>`) })
+    .on('mousemove',e=> tooltip.style('left',`${e.clientX+16}px`).style('top',`${e.clientY-12}px`))
+    .on('mouseleave',()=>{ this.hoverA=null; tooltip.style('opacity',0) })
+  d3.select(el).on('mouseleave',()=> tooltip.style('opacity',0))
+}
+,
 
     /* ---------- Chart B ---------- */
     /* ---------- Chart B (rework) ---------- */
@@ -424,12 +448,12 @@ drawChartB(){
     .transition().duration(900).delay(120).ease(d3.easeCubicOut).attr('stroke-dashoffset',0)
 
   // axes (fewer, nicer ticks)
-  const years=data.map(d=>d.Year)
-  const xTicks=years.filter((_,i)=> i%2===0) // every 2 years
-  plot.append('g').attr('class','axis x').attr('transform',`translate(0,${ih})`)
-    .call(d3.axisBottom(x).tickValues(xTicks).tickFormat(d3.format('d')))
-  plot.append('g').attr('class','axis y')
-    .call(d3.axisLeft(y).ticks(4).tickFormat(d3.format('~s'))) // 50k, 100k…
+  const years = data.map(d=>d.Year);
+const step1 = iw < 360 ? 5 : iw < 520 ? 4 : iw < 760 ? 3 : 2;   // bigger step on smaller screens
+const xTicks = years.filter((_,i)=> i%step1===0);
+plot.append('g').attr('class','axis x').attr('transform',`translate(0,${ih})`)
+  .call(d3.axisBottom(x).tickValues(xTicks).tickFormat(d3.format('d')));
+
 
   // peak callout that never collides
   const peak=data.reduce((a,b)=> a.Population>b.Population?a:b)
@@ -500,10 +524,57 @@ drawChartB(){
         .attr('text-anchor','middle').text(d=>d.label)
 
       const delta=(post-pre)
+      const compact = iw < 360;
       svg.append('text').attr('x',m.left+iw/2).attr('y',m.top+16)
         .attr('text-anchor','middle').attr('class','anno')
-        .text(`${delta>=0?'+':''}${delta.toFixed(1)} per 1,000 → Higher post‑COVID`)
-    }
+        .text(compact ? `${delta>=0?'+':''}${delta.toFixed(1)}/1k post‑COVID`
+                      : `${delta>=0?'+':''}${delta.toFixed(1)} per 1,000 → Higher post‑COVID`);
+    },
+    // add after your other methods
+decorateXAxis(g, x, ih){
+  // bigger/easier hit targets
+  g.selectAll('.tick')
+    .append('rect')
+    .attr('class','tick-hit')
+    .attr('x', -18).attr('y', -26)
+    .attr('width', 36).attr('height', 34);
+
+  // a single guide line we move around
+  const guide = g.append('g').append('line')
+    .attr('class','guide')
+    .attr('y1', 0).attr('y2', -ih)
+    .style('opacity', 0);
+
+  // interactions
+  g.selectAll('.tick')
+    .on('mouseenter touchstart', (e, d) => {
+      const xPos = x(d);
+      guide.attr('transform', `translate(${xPos},0)`)
+           .transition().duration(120).style('opacity', 1);
+      d3.select(e.currentTarget).classed('active', true);
+    })
+    .on('mouseleave touchend', (e) => {
+      guide.transition().duration(120).style('opacity', 0);
+      d3.select(e.currentTarget).classed('active', false);
+    });
+},
+
+decorateYAxis(g, ih){
+  // optional: subtle tick underline on hover
+  g.selectAll('.tick')
+    .append('rect')
+    .attr('class','tick-hit')
+    .attr('x', -30).attr('y', -14)
+    .attr('width', 60).attr('height', 28);
+
+  g.selectAll('.tick')
+    .on('mouseenter touchstart', (e) => {
+      d3.select(e.currentTarget).classed('active', true);
+    })
+    .on('mouseleave touchend', (e) => {
+      d3.select(e.currentTarget).classed('active', false);
+    });
+},
   }
 }
 
@@ -613,11 +684,7 @@ path, .grid line{ pointer-events:none }
   stroke: rgba(45,90,39,.25);
   shape-rendering: geometricPrecision;
 }
-.axis .tick text{
-  fill: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
+
 .grid line{
   stroke-dasharray: 3 3;
 }
@@ -669,4 +736,86 @@ path, .grid line{ pointer-events:none }
 {
   scroll-margin-top: var(--anchor-pad);
 }
+
+/* ===== Phone tweaks (≤720px) ===== */
+@media (max-width: 720px){
+  .insights-page{ padding:20px 14px 36px }
+  .hero{ grid-template-columns:1fr; gap:10px; align-items:flex-start }
+  .hero-badges{ justify-content:flex-start; flex-wrap:wrap }
+  .subtitle{ font-size:14px; line-height:1.45; max-width:unset; text-wrap:balance }
+
+  .toolbar{ gap:10px; flex-direction:column; align-items:stretch }
+  .btn-group, .btn-right{ width:100%; gap:6px }
+  .btn{ width:calc((100% - 6px)/2); padding:8px 10px; font-size:12px }
+  .btn-right .btn{ width:100% }            /* Download/COVID band full width */
+
+  .kpis{ grid-template-columns:1fr; gap:12px; margin:12px 0 20px }
+  .kpi-card{ padding:12px 12px 10px; border-radius:14px }
+  .kpi-value{ font-size:22px }
+  .kpi-sub{ font-size:11px }
+  .spark{ height:64px; margin-top:6px }
+
+  .row{ grid-template-columns:1fr; gap:14px; margin-bottom:18px }
+  .prose-block{ min-height:auto; padding:16px }
+  .display{ font-size: clamp(22px, 8vw, 34px) }
+  .lede{ font-size: 15px; margin-bottom:10px }
+  .fact-row{ gap:8px 12px }
+  .fact{ font-weight:600; font-size:13px }
+
+  .chart{ min-height:260px }
+  .chart.narrow{ min-height:200px }
+  .chart-card{ padding:10px 10px 8px; border-radius:16px }
+  .chart-head h2{ font-size:16px }
+  .chart-head p{ font-size:12px }
+
+  .source, .anno, .legend{ font-size:11px }
+  .tooltip{ font-size:11px; padding:6px 8px }
+}
+
+/* ===== Small phones (≤380px) ===== */
+@media (max-width: 380px){
+  .btn{ width:100% }                       /* stack buttons one per row */
+  .kpi-value{ font-size:20px }
+  .chart{ min-height:220px }
+}
+
+/* Tick typography + micro‑interactions */
+.axis .tick text{
+  font-family: "Inter var", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+  font-weight: 600;
+  letter-spacing: .2px;
+  transition: transform .12s ease, fill .12s ease, opacity .12s ease;
+  opacity: .85;
+}
+
+.axis .tick.active text{ fill: var(--accent); opacity: 1; transform: translateY(-1px); }
+
+/* Invisible hit area so small labels are easy to tap */
+.tick-hit{ fill: transparent; cursor: pointer }
+
+/* Vertical guide line shown on hover/tap */
+.axis .guide{
+  stroke: var(--accent);
+  stroke-opacity: .15;
+  stroke-width: 1.5;
+}
+
+:global(.axis .tick text){
+  font-family:"Inter var",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;
+  font-weight:600;
+  letter-spacing:.2px;
+  transition:transform .12s ease, fill .12s ease, opacity .12s ease;
+  opacity:.85;
+  fill: var(--muted);
+}
+:global(.axis .tick.active text){
+  fill: var(--accent);
+  opacity:1;
+  transform:translateY(-1px);
+}
+:global(.tick-hit){ fill:transparent; cursor:pointer }
+:global(.axis .guide){ stroke:var(--accent); stroke-opacity:.15; stroke-width:1.5 }
+
+
+
 </style>
