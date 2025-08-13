@@ -373,7 +373,7 @@ export default {
 }
 .ticker__mask::after { right: 0; transform: scaleX(-1); }
 .ticker__track { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; will-change: transform; animation: ticker-move 26s linear infinite; }
-.ticker__item { font-size: 16px; font-weight: 600; opacity: .95; }
+.ticker__item { font-size: 16px; font-weight: 600; opacity: .95; color: #000000}
 .ticker__dot { opacity: .6; }
 @keyframes ticker-move { 0% { transform: translateX(0) } 100% { transform: translateX(-50%) } }
 
